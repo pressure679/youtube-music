@@ -39,14 +39,14 @@ search_and_prompt() {
     done
     if [ $hasSeen -eq 0 ]; then
       local seen="$seen $collectionId"
-      echo -n "Download $albumName by $artistName? [y/n]: "
-      read userInput
-      if [ "$userInput" = "y" ]; then
-        echo 'Downloading...'
+      # echo -n "Download $albumName by $artistName? [y/n]: "
+      # read userInput
+      # if [ "$userInput" = "y" ]; then
+	echo "$songName"
         fetch_album $(echo "$result" | jq .collectionId) \
           "$(echo "$artistName" | jq -r .)" \
           "$(echo "$albumName" | jq -r .)"
-      fi
+      # fi
     fi
   done
 }
@@ -64,24 +64,31 @@ fetch_album() {
     if [ "$songName" = null ]; then
       continue
     fi
-    local vidId=$(youtube_search "$songName by $artistName")
-    fetch_song "$vidId" "$songName" "$artistName" "$albumName" "$trackNumber"
+    if [ -e "$HOME/$OUT_DIR/$songName\.mp3" ]; then
+      # if [ ID3v2_info "\"$HOME/$OUT_DIR/$songName\.mp3\"" = "$albumName $artistName $songName" ]; then
+        continue
+      else
+	local vidId=$(youtube_search "$songName by $artistName")
+	fetch_song "$vidId" "$songName" "$artistName" "$albumName" "$trackNumber"
+      # fi
+    fi
   done
 }
 
 fetch_song() {
   local cleanName=$(echo "$2" | tr '/' ':')
-  local filename="$cleanName.mp3"
-  echo "Fetching $filename ..."
-  cd $OUT_DIR
+  local filename="\"$cleanName.mp3\""
+  echo "$2"
+  cd $HOME/$OUT_DIR
   youtube-dl https://youtube.com/watch?v=$1 \
     --quiet --extract-audio --audio-format mp3 \
-    --output "$cleanName.%(ext)s"
+    --output "$cleanName.%(ext)s" \
+    --continue
   id3v2 --song "$2" "$filename"
   id3v2 --artist "$3" "$filename"
   id3v2 --album "$4" "$filename"
   id3v2 --track "$5" "$filename"
-  cd - >/dev/null
+  # cd - >/dev/null
 }
 
 youtube_search() {
